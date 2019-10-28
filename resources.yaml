@@ -1,0 +1,58 @@
+---
+Resources:  
+  LT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateName: 'lucid-launch-template'
+      LaunchTemplateData: 
+        ImageId: ami-00aa4671cbf840d82
+        InstanceType: t2.micro # i used micro instead of nano since i'm not sure if nano is eligible for free tier
+
+  TG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: 'vpc-0d8b58f3d5536f853' # replace with Ref
+      TargetType: instance
+      Port: 80
+      Protocol: HTTP
+
+  ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: 'lucid-as-group'
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LT
+        Version: !GetAtt LT.LatestVersionNumber
+      MaxSize: '2'
+      MinSize: '2'
+      VPCZoneIdentifier: 
+        - 'subnet-09510f16a5e18ca66' # replace with Ref
+      TargetGroupARNs:
+        - !Ref TG
+      # Tags: 
+      #   - TagProperty
+
+  AppLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Name: 'lucid-lb'
+      # SecurityGroups: 
+      #   - String
+      # Tags: 
+      #   - Tag
+      Subnets:
+        - subnet-09510f16a5e18ca66
+        - subnet-0c6716c5069c5d0ab
+      Type: 'application'
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - Type: 'forward'
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref AppLB
+      Port: 80
+      Protocol: HTTP
+
+
