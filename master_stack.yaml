@@ -16,6 +16,7 @@ Parameters:
 
 Resources:
 # Network resources
+
   Vpc:
     Type: AWS::EC2::VPC
     Properties: 
@@ -24,13 +25,15 @@ Resources:
       - Key: Name
         Value: lucid_vpc
 
-  Igw:
+  # Internet gateway for communication with internet outside of the VPC
+  Igw: 
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
       - Key: Name
         Value: lucid_igw 
 
+  # Attaching the internet gateway to the VPC
   IgwVpcAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties: 
@@ -47,6 +50,31 @@ Resources:
       - Key: Name
         Value: lucid_public_subnet
 
+  # Routing table for the public subnet
+  PublicSubnetRT:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref Vpc
+      Tags:
+      - Key: Name
+        Value: lucid_public_subnet_rt
+
+  # Attaching the route table to the public subnet
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PublicSubnetRT
+      SubnetId: !Ref PublicSubnet
+
+  # Public subnet routing table entry sending all outbound traffic to the Internet gateway
+  PublicTrafficRoute:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
+      RouteTableId: !Ref PublicSubnetRT
+
+    # Required for Application loadbalancer
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties: 
@@ -62,33 +90,13 @@ Resources:
     Properties: 
       CidrBlock: !Ref PrivateSubnetCidrBlock
       VpcId: !Ref Vpc
-      AvailabilityZone: eu-central-1a # hardcoded to avoid AZ collision for Application loadbalancer
+      AvailabilityZone: eu-central-1a # hardcoded to avoid AZ collision for DB Subnet group
       Tags:
       - Key: Name
         Value: lucid_private_subnet
 
-  PublicSubnetRT:
-    Type: AWS::EC2::RouteTable
-    Properties: 
-      VpcId: !Ref Vpc
-      Tags:
-      - Key: Name
-        Value: lucid_public_subnet_rt
-
-  PublicSubnetRTAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: 
-      RouteTableId: !Ref PublicSubnetRT
-      SubnetId: !Ref PublicSubnet
-
-  PublicTrafficRoute:
-    Type: AWS::EC2::Route
-    Properties: 
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref Igw
-      RouteTableId: !Ref PublicSubnetRT
-
 # Security groups
+
   LBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
@@ -112,6 +120,7 @@ Resources:
           SourceSecurityGroupId: !Ref LBSecurityGroup
       VpcId: !Ref Vpc
 
+  # Egress rule is configured separately to avoid cross-stack reference not allowed by CloudFormation
   LBSGEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties: 
@@ -125,7 +134,7 @@ Resources:
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: 'VPC SG allowing incoming traffic from ec2 instances having the backend SG assigned'
+      GroupDescription: 'allows incoming traffic from ec2 instances having the backend SG assigned to the DB instance'
       GroupName: lucid-db-sg
       SecurityGroupIngress: 
         - Description: 'allows incoming traffic from backend instances to the default mysql port'
@@ -135,6 +144,8 @@ Resources:
       VpcId: !Ref Vpc
 
 # Database resources
+
+  # Required for the DB instance
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties: 
@@ -174,16 +185,19 @@ Resources:
         - !Ref DBSecurityGroup
 
 # Computing resources
+
+  # Launch template for instances within the Autoscaling group
   LT:
     Type: AWS::EC2::LaunchTemplate
     Properties: 
       LaunchTemplateName: 'lucid-launch-template'
       LaunchTemplateData: 
-        ImageId: ami-00aa4671cbf840d82
-        InstanceType: t2.micro # i used micro instead of nano since i'm not sure if nano is eligible for free tier
+        ImageId: ami-00aa4671cbf840d82 # the latest standart Linux AMI
+        InstanceType: t2.micro # I used micro instead of nano since I'm not sure if nano is eligible for free tier
         SecurityGroupIds:
           - !Ref BackendSecurityGroup
 
+  # Target group for routing traffic from the loadbalancer to the instances
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -205,9 +219,6 @@ Resources:
         - !Ref PrivateSubnet
       TargetGroupARNs:
         - !Ref TG
-      # Tags: 
-      # - Key: Name
-      #   Value: lucid_autoscaling_group
 
   AppLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -223,6 +234,7 @@ Resources:
         - !Ref PublicSubnet2
       Type: 'application'
 
+  # Listener routing traffic from the loadbalancer to the instances
   HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties: 
