@@ -45,7 +45,7 @@ Resources:
     Properties: 
       CidrBlock: !Ref PublicSubnetCidrBlock
       VpcId: !Ref Vpc
-      AvailabilityZone: eu-central-1a # hardcoded to avoid AZ collision for Application loadbalancer
+      AvailabilityZone: eu-central-1a  # hardcoded to avoid AZ collision for Application loadbalancer
       Tags:
       - Key: Name
         Value: lucid_public_subnet
@@ -74,7 +74,7 @@ Resources:
       GatewayId: !Ref Igw
       RouteTableId: !Ref PublicSubnetRT
 
-    # Required for Application loadbalancer
+  # Required for Application loadbalancer
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties: 
@@ -90,7 +90,7 @@ Resources:
     Properties: 
       CidrBlock: !Ref PrivateSubnetCidrBlock
       VpcId: !Ref Vpc
-      AvailabilityZone: eu-central-1a # hardcoded to avoid AZ collision for DB Subnet group
+      AvailabilityZone: eu-central-1a  # hardcoded to avoid AZ collision for DB Subnet group
       Tags:
       - Key: Name
         Value: lucid_private_subnet
@@ -192,8 +192,8 @@ Resources:
     Properties: 
       LaunchTemplateName: 'lucid-launch-template'
       LaunchTemplateData: 
-        ImageId: ami-00aa4671cbf840d82 # the latest standart Linux AMI
-        InstanceType: t2.micro # I used micro instead of nano since I'm not sure if nano is eligible for free tier
+        ImageId: ami-00aa4671cbf840d82  # the latest standart Linux AMI
+        InstanceType: t2.micro  # I used micro instead of nano since I'm not sure if nano is eligible for free tier
         SecurityGroupIds:
           - !Ref BackendSecurityGroup
 
@@ -229,7 +229,7 @@ Resources:
       Tags: 
       - Key: Name
         Value: lucid_loadbalancer
-      Subnets: # Application LB requires having at least two public subnets in different availability zones; for testing purposes I created an additional subnet with fixed CIDR block and availability zone
+      Subnets:  # Application LB requires having at least two public subnets in different availability zones; for testing purposes I created an additional subnet with fixed CIDR block and availability zone
         - !Ref PublicSubnet
         - !Ref PublicSubnet2
       Type: 'application'
