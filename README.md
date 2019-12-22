@@ -1,7 +1,7 @@
-# Lucid test task
+# Cloudformation test project
 
-While working on a stack, I used several separate files for creating different logical components; after the testing was done, I merged them into the single master stack file (`master_stack.yaml`), which is the final solution. However, I'm leaving these precursor files in a separate folder just in case you'll be wondering about the workflow. However, they have been updated after merging for having the final solution stack functioning as a whole and can be only considered as a draft.
 
+![Diagram](diagram.png)
 The stack describes resources explicitly mentioned in the task diagram, some additional resources enabling communication between them and providing accesses (security groups, internet gateways, route tables, target groups), and finally some resources not required by the task itself, but by some of its components (additional subnets, DB subnet group). 
 
 These are two mock additional subnets:
